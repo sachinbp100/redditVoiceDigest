@@ -124,6 +124,17 @@ export default function LandingPage({ onGenerate, error }: LandingPageProps) {
                 Generate My Briefing
               </span>
             </button>
+            
+            <button
+              type="button"
+              onClick={() => { setUsername('demo'); onGenerate('demo', timeRange, limit); }}
+              className="w-full mt-3 py-3 px-6 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 hover:border-indigo-500/30 rounded-2xl font-medium text-sm transition-all duration-200 text-slate-300 hover:text-white"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Try Demo (No Reddit API needed)
+              </span>
+            </button>
           </form>
 
           {/* Error */}
@@ -140,7 +151,10 @@ export default function LandingPage({ onGenerate, error }: LandingPageProps) {
 
           {/* Example */}
           <p className="text-slate-600 text-sm mt-4">
-            Try with: <button onClick={() => setUsername('spez')} className="text-indigo-400 hover:text-indigo-300 transition-colors">spez</button> or any public Reddit username
+            Try with: <button onClick={() => setUsername('spez')} className="text-indigo-400 hover:text-indigo-300 transition-colors">spez</button>, <button onClick={() => setUsername('demo')} className="text-indigo-400 hover:text-indigo-300 transition-colors">demo</button>, or any Reddit username
+          </p>
+          <p className="text-slate-700 text-xs mt-2">
+            💡 Works with any username! If Reddit API is unavailable, demo data will be used automatically.
           </p>
           
           <button

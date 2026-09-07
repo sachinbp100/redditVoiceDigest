@@ -37,23 +37,41 @@ interface RedditListingData {
 }
 
 async function fetchRedditJSON(url: string): Promise<any> {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': USER_AGENT,
-    },
-  });
-  
-  if (response.status === 404) {
-    throw new Error('User not found');
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': USER_AGENT,
+      },
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('User not found');
+      }
+      if (response.status === 429) {
+        throw new Error('Rate limited');
+      }
+      if (response.status === 403) {
+        throw new Error('Access forbidden - Reddit API may be blocked');
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Check if response is valid
+    if (!data || !data.data || !data.data.children) {
+      throw new Error('Invalid Reddit response format');
+    }
+    
+    return data;
+  } catch (error) {
+    // Handle CORS errors
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new Error('CORS_ERROR');
+    }
+    throw error;
   }
-  if (response.status === 429) {
-    throw new Error('Rate limited');
-  }
-  if (!response.ok) {
-    throw new Error(`Reddit API error: ${response.status}`);
-  }
-  
-  return response.json();
 }
 
 async function fetchUserPosts(username: string, timeRange: TimeRange, limit: number): Promise<RedditPost[]> {
