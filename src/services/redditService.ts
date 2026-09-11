@@ -3,6 +3,13 @@ import { RedditActivity, RedditPost, RedditComment, TimeRange } from '../types';
 const REDDIT_BASE = 'https://www.reddit.com';
 const USER_AGENT = 'RedditVoiceDigest/1.0';
 
+// Multiple CORS proxies with fallback
+const CORS_PROXIES = [
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
 function getTimeFilter(timeRange: TimeRange): string {
   switch (timeRange) {
     case '7days': return 'week';
@@ -26,52 +33,73 @@ function getTimestampCutoff(timeRange: TimeRange): number {
   }
 }
 
-interface RedditListingData {
-  data: {
-    children: Array<{
-      kind: string;
-      data: any;
-    }>;
-    after: string | null;
-  };
-}
-
-async function fetchRedditJSON(url: string): Promise<any> {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-      },
-    });
+async function fetchWithProxy(url: string): Promise<any> {
+  // Try each CORS proxy in order
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    const proxyUrl = CORS_PROXIES[i](url);
     
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('User not found');
+    try {
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'User-Agent': USER_AGENT,
+        },
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('User not found');
+        }
+        if (response.status === 429) {
+          throw new Error('Rate limited');
+        }
+        console.warn(`Proxy ${i + 1} returned status ${response.status}, trying next...`);
+        continue;
       }
-      if (response.status === 429) {
-        throw new Error('Rate limited');
+      
+      const data = await response.json();
+      
+      // Validate response structure
+      if (!data || !data.data || !data.data.children) {
+        console.warn(`Proxy ${i + 1} returned invalid data, trying next...`);
+        continue;
       }
-      if (response.status === 403) {
-        throw new Error('Access forbidden - Reddit API may be blocked');
+      
+      return data;
+    } catch (error) {
+      // If it's a critical error (user not found), throw immediately
+      if (error instanceof Error && (error.message === 'User not found' || error.message === 'Rate limited')) {
+        throw error;
       }
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      
+      console.warn(`Proxy ${i + 1} failed:`, error);
+      
+      // Try next proxy
+      if (i === CORS_PROXIES.length - 1) {
+        // Last proxy failed, try direct fetch as final attempt
+        try {
+          const directResponse = await fetch(url, {
+            headers: { 'User-Agent': USER_AGENT },
+          });
+          
+          if (!directResponse.ok) {
+            throw new Error(`Direct fetch failed: ${directResponse.status}`);
+          }
+          
+          const data = await directResponse.json();
+          
+          if (data && data.data && data.data.children) {
+            return data;
+          }
+        } catch (directError) {
+          console.warn('Direct fetch also failed:', directError);
+        }
+        
+        throw new Error('All CORS proxies failed. Please try again later.');
+      }
     }
-    
-    const data = await response.json();
-    
-    // Check if response is valid
-    if (!data || !data.data || !data.data.children) {
-      throw new Error('Invalid Reddit response format');
-    }
-    
-    return data;
-  } catch (error) {
-    // Handle CORS errors
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      throw new Error('CORS_ERROR');
-    }
-    throw error;
   }
+  
+  throw new Error('Failed to fetch Reddit data');
 }
 
 async function fetchUserPosts(username: string, timeRange: TimeRange, limit: number): Promise<RedditPost[]> {
@@ -85,7 +113,7 @@ async function fetchUserPosts(username: string, timeRange: TimeRange, limit: num
     const url = `${REDDIT_BASE}/user/${username}/submitted.json?limit=25&t=${timeFilter}&after=${after}`;
     
     try {
-      const data: RedditListingData = await fetchRedditJSON(url);
+      const data = await fetchWithProxy(url);
       
       if (!data.data.children.length) break;
       
@@ -108,13 +136,14 @@ async function fetchUserPosts(username: string, timeRange: TimeRange, limit: num
         if (posts.length >= limit) break;
       }
       
-      after = data.data.after;
+      after = data.data.after || null;
       if (!after) break;
       
-      // Rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Rate limiting - be respectful
+      await new Promise(resolve => setTimeout(resolve, 1500));
     } catch (e) {
       if (e instanceof Error && e.message === 'User not found') throw e;
+      if (e instanceof Error && e.message === 'Rate limited') throw e;
       break;
     }
   }
@@ -133,7 +162,7 @@ async function fetchUserComments(username: string, timeRange: TimeRange, limit: 
     const url = `${REDDIT_BASE}/user/${username}/comments.json?limit=25&t=${timeFilter}&after=${after}`;
     
     try {
-      const data: RedditListingData = await fetchRedditJSON(url);
+      const data = await fetchWithProxy(url);
       
       if (!data.data.children.length) break;
       
@@ -158,10 +187,11 @@ async function fetchUserComments(username: string, timeRange: TimeRange, limit: 
       after = data.data.after || null;
       if (!after) break;
       
-      // Rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Rate limiting - be respectful
+      await new Promise(resolve => setTimeout(resolve, 1500));
     } catch (e) {
       if (e instanceof Error && e.message === 'User not found') throw e;
+      if (e instanceof Error && e.message === 'Rate limited') throw e;
       break;
     }
   }
@@ -175,7 +205,7 @@ export async function fetchRedditActivity(
   limit: number,
   onProgress?: (step: string) => void
 ): Promise<RedditActivity[]> {
-  onProgress?.('Fetching Reddit posts...');
+  onProgress?.('Fetching Reddit posts via CORS proxy...');
   
   const halfLimit = Math.floor(limit / 2);
   

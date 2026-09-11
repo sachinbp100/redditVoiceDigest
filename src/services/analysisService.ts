@@ -361,6 +361,7 @@ export function analyzeRedditActivity(activities: RedditActivity[]): AnalysisRes
     mostDiscussedTopic: topics[0]?.name || 'Unknown',
     topSubreddit: subreddits[0]?.name || 'Unknown',
     mostRecentActivity: mostRecentDate,
+    dataSource: 'demo', // Will be updated in App.tsx
   };
 }
 

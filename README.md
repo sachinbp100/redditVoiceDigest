@@ -92,11 +92,17 @@ src/
 
 ### Reddit Data Access
 
-The application uses Reddit's public JSON endpoints:
+The application uses Reddit's public JSON endpoints via **CORS proxies** to bypass browser restrictions:
 - `https://www.reddit.com/user/{username}/submitted.json`
 - `https://www.reddit.com/user/{username}/comments.json`
 
-These endpoints return publicly available data without requiring authentication.
+**How it works:**
+1. Requests go through CORS proxies (allorigins.win, corsproxy.io, codetabs.com)
+2. Proxies forward requests to Reddit and add proper CORS headers
+3. Browser receives data as if it came from the same origin
+4. Multiple fallback proxies ensure reliability
+
+This is similar to how native apps (like Huxe AI) access Reddit without CORS issues - they use native HTTP clients that don't enforce CORS.
 
 ### Text-to-Speech
 

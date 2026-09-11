@@ -59,13 +59,26 @@ export default function Dashboard({ result, chatMessages, voices, onChat, onNewA
               </p>
             </div>
           </div>
-          <button
-            onClick={onNewAnalysis}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-red-500/10 border border-slate-700/50 hover:border-red-500/30 text-slate-400 hover:text-red-400 text-xs transition-all"
-          >
-            <Trash2 className="w-3 h-3" />
-            <span className="hidden sm:inline">Delete Session</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Data Source Indicator */}
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${
+              result.dataSource === 'live' 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                result.dataSource === 'live' ? 'bg-emerald-400' : 'bg-amber-400'
+              }`} />
+              <span className="hidden sm:inline">{result.dataSource === 'live' ? 'Live Data' : 'Demo Data'}</span>
+            </div>
+            <button
+              onClick={onNewAnalysis}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-red-500/10 border border-slate-700/50 hover:border-red-500/30 text-slate-400 hover:text-red-400 text-xs transition-all"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span className="hidden sm:inline">Delete Session</span>
+            </button>
+          </div>
         </div>
       </header>
 

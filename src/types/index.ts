@@ -69,6 +69,7 @@ export interface AnalysisResult {
   mostDiscussedTopic: string;
   topSubreddit: string;
   mostRecentActivity: string;
+  dataSource: 'live' | 'demo';
 }
 
 export interface ChatMessage {

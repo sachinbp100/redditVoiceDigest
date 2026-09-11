@@ -78,6 +78,15 @@ export default function App() {
       const analysis = analyzeRedditActivity(activities);
       analysis.username = cleaned;
       analysis.timeRange = tRange;
+      
+      // Set data source based on whether we used real or demo data
+      if (cleaned === 'demo_user' || cleaned === 'demo') {
+        analysis.dataSource = 'demo';
+      } else {
+        // Check if we got real data (posts have real Reddit IDs, not demo_*)
+        const hasRealData = activities.length > 0 && !activities[0].id.startsWith('post_') && !activities[0].id.startsWith('comment_');
+        analysis.dataSource = hasRealData ? 'live' : 'demo';
+      }
 
       setLoadingStep('Preparing voice briefing...');
       await new Promise(r => setTimeout(r, 600));
