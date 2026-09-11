@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <title>Reddit Voice Digest - WebView Standalone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .logo-text {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-size: 48px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 20px;
+            color: #94a3b8;
+            margin-bottom: 40px;
+        }
+        
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 16px;
+            padding: 32px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(100, 116, 139, 0.2);
+            color: #cbd5e1;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(100, 116, 139, 0.3);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(99, 102, 241, 0.2);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .results {
+            margin-top: 40px;
+        }
+        
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #6366f1;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+        
+        .topic-bar {
+            margin-bottom: 16px;
+        }
+        
+        .topic-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .topic-name {
+            font-weight: 600;
+        }
+        
+        .topic-percent {
+            color: #6366f1;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: rgba(100, 116, 139, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .voice-player {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .voice-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .voice-btn {
+            padding: 10px 20px;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .voice-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+        
+        .voice-btn.active {
+            background: #6366f1;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-web {
+            background: rgba(14, 165, 233, 0.2);
+            color: #0ea5e9;
+            border: 1px solid rgba(14, 165, 233, 0.3);
+        }
+        
+        .badge-live {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .badge-demo {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">🎙️</div>
+                <div class="logo-text">Reddit Voice Digest</div>
+            </div>
+            <h1>Turn Reddit Activity Into an AI Voice Briefing</h1>
+            <p class="subtitle">Enter any Reddit username to get an intelligent summary with voice briefing</p>
+        </div>
+
+        <div id="input-section" class="form-container">
+            <div class="info">
+                💡 <strong>WebView Mode:</strong> This app uses CORS proxies to fetch Reddit data. If proxies are unavailable, demo data will be used automatically.
+            </div>
+            
+            <div id="error-message" class="error hidden"></div>
+            
+            <div class="input-group">
+                <label for="username">Reddit Username</label>
+                <input type="text" id="username" placeholder="e.g., spez, kn0w, Shittymorph" autocomplete="off">
+            </div>
+            
+            <div class="input-group">
+                <label for="timeRange">Time Range</label>
+                <select id="timeRange">
+                    <option value="7days">Last 7 Days</option>
+                    <option value="30days" selected>Last 30 Days</option>
+                    <option value="3months">Last 3 Months</option>
+                    <option value="6months">Last 6 Months</option>
+                    <option value="all">All Available</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="limit">Activity Limit</label>
+                <select id="limit">
+                    <option value="50">50 activities</option>
+                    <option value="100" selected>100 activities</option>
+                    <option value="250">250 activities</option>
+                    <option value="500">500 activities</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="generateBriefing()">
+                    🎙️ Generate My Briefing
+                </button>
+                <button class="btn-secondary" onclick="loadDemo()">
+                    ⚡ Try Demo
+                </button>
+            </div>
+        </div>
+
+        <div id="loading-section" class="loading hidden">
+            <div class="spinner"></div>
+            <h2>Analyzing Reddit Activity</h2>
+            <p id="loading-step">Connecting to Reddit...</p>
+        </div>
+
+        <div id="results-section" class="results hidden">
+            <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+                <span class="badge badge-web">🌐 WebView</span>
+                <span id="data-source-badge" class="badge badge-live">🟢 Live Data</span>
+            </div>
+
+            <div class="voice-player">
+                <h2>🎙️ AI Voice Briefing</h2>
+                <div class="voice-controls">
+                    <button class="voice-btn" onclick="playBriefing()">▶️ Play</button>
+                    <button class="voice-btn" onclick="pauseBriefing()">⏸️ Pause</button>
+                    <button class="voice-btn" onclick="stopBriefing()">⏹️ Stop</button>
+                    <button class="voice-btn" onclick="restartBriefing()">🔄 Restart</button>
+                </div>
+                <div id="voice-script" style="max-height: 300px; overflow-y: auto; padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 8px; font-size: 14px; line-height: 1.6;"></div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Activity Summary</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-posts">0</div>
+                        <div class="stat-label">Total Posts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-comments">0</div>
+                        <div class="stat-label">Total Comments</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="top-subreddit">-</div>
+                        <div class="stat-label">Top Subreddit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="top-topic">-</div>
+                        <div class="stat-label">Top Topic</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Topic Distribution</h2>
+                <div id="topics-container"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 32px;">
+                <button class="btn-secondary" onclick="resetApp()">🔄 New Analysis</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CORS Proxies for WebView
+        const CORS_PROXIES = [
+            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+            url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+        ];
+
+        let currentUtterance = null;
+        let analysisResult = null;
+
+        // Fetch with CORS proxy fallback
+        async function fetchWithProxy(url) {
+            for (let i = 0; i < CORS_PROXIES.length; i++) {
+                try {
+                    const proxyUrl = CORS_PROXIES[i](url);
+                    const response = await fetch(proxyUrl);
+                    
+                    if (!response.ok) {
+                        console.warn(`Proxy ${i + 1} failed with status ${response.status}`);
+                        continue;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data && data.data && data.data.children) {
+                        return data;
+                    }
+                } catch (error) {
+                    console.warn(`Proxy ${i + 1} error:`, error);
+                }
+            }
+            
+            throw new Error('All proxies failed');
+        }
+
+        // Generate demo data
+        function generateDemoData(username) {
+            const posts = [
+                { id: '1', title: 'What AI tools are you using for product management?', body: 'I have been exploring different AI tools to help with product management workflows...', subreddit: 'productmanagement', score: 45, created_utc: Date.now() / 1000 - 86400 },
+                { id: '2', title: 'The future of AI in software development', body: 'After working in tech for 10 years, here are my thoughts on how AI will reshape software development...', subreddit: 'technology', score: 128, created_utc: Date.now() / 1000 - 172800 },
+                { id: '3', title: 'How I transitioned from engineering to product management', body: 'After 5 years as a software engineer, I made the switch to PM...', subreddit: 'careerguidance', score: 89, created_utc: Date.now() / 1000 - 259200 }
+            ];
+
+            const comments = [
+                { id: '4', body: 'Great point about the importance of user research in product development...', subreddit: 'productmanagement', score: 34, created_utc: Date.now() / 1000 - 43200 },
+                { id: '5', body: 'I have been using LangChain for building RAG applications and it is a game-changer...', subreddit: 'artificial', score: 28, created_utc: Date.now() / 1000 - 86400 },
+                { id: '6', body: 'TypeScript has completely changed how I approach frontend development...', subreddit: 'webdev', score: 45, created_utc: Date.now() / 1000 - 129600 }
+            ];
+
+            return [...posts, ...comments];
+        }
+
+        // Analyze topics
+        function analyzeTopics(activities) {
+            const topics = {
+                'AI & Technology': 0,
+                'Programming': 0,
+                'Product Management': 0,
+                'Career': 0,
+                'Other': 0
+            };
+
+            activities.forEach(activity => {
+                const text = (activity.title || '') + ' ' + (activity.body || '');
+                const lowerText = text.toLowerCase();
+                
+                if (lowerText.includes('ai') || lowerText.includes('artificial') || lowerText.includes('machine learning') || lowerText.includes('technology')) {
+                    topics['AI & Technology']++;
+                } else if (lowerText.includes('code') || lowerText.includes('programming') || lowerText.includes('developer') || lowerText.includes('typescript')) {
+                    topics['Programming']++;
+                } else if (lowerText.includes('product') || lowerText.includes('management') || lowerText.includes('pm')) {
+                    topics['Product Management']++;
+                } else if (lowerText.includes('career') || lowerText.includes('job') || lowerText.includes('work')) {
+                    topics['Career']++;
+                } else {
+                    topics['Other']++;
+                }
+            });
+
+            const total = activities.length;
+            return Object.entries(topics)
+                .filter(([_, count]) => count > 0)
+                .map(([name, count]) => ({
+                    name,
+                    count,
+                    percentage: Math.round((count / total) * 100)
+                }))
+                .sort((a, b) => b.count - a.count);
+        }
+
+        // Generate voice script
+        function generateVoiceScript(username, activities, topics) {
+            const posts = activities.filter(a => a.title);
+            const comments = activities.filter(a => !a.title);
+            
+            let script = `Hey there! I've analyzed the recent Reddit activity for u/${username}, and I've got some interesting findings to share with you.\n\n`;
+            
+            script += `Overall, I looked through ${activities.length} pieces of activity - that's ${posts.length} posts and ${comments.length} comments. `;
+            
+            if (topics.length > 0) {
+                script += `The biggest theme I noticed is ${topics[0].name}`;
+                if (topics.length > 1) {
+                    script += `, followed by ${topics[1].name}`;
+                }
+                script += `. `;
+            }
+            
+            script += `\n\nYour activity shows a diverse range of interests across multiple subreddits. `;
+            
+            if (posts.length > 0) {
+                script += `Some of your most engaging posts include discussions about ${posts[0].title.substring(0, 50)}... `;
+            }
+            
+            script += `\n\nTo wrap things up, u/${username}'s Reddit activity paints a picture of someone deeply interested in ${topics[0]?.name || 'various topics'}. `;
+            script += `That's the overview! Feel free to explore more details below.`;
+            
+            return script;
+        }
+
+        // Main generate function
+        async function generateBriefing() {
+            const username = document.getElementById('username').value.trim();
+            const timeRange = document.getElementById('timeRange').value;
+            const limit = parseInt(document.getElementById('limit').value);
+
+            if (!username) {
+                showError('Please enter a Reddit username');
+                return;
+            }
+
+            showLoading('Connecting to Reddit...');
+
+            try {
+                // Try to fetch real data
+                const postsUrl = `https://www.reddit.com/user/${username}/submitted.json?limit=${Math.floor(limit / 2)}&t=${timeRange === '7days' ? 'week' : timeRange === '30days' ? 'month' : timeRange === '3months' ? 'month' : 'year'}`;
+                const commentsUrl = `https://www.reddit.com/user/${username}/comments.json?limit=${Math.floor(limit / 2)}&t=${timeRange === '7days' ? 'week' : timeRange === '30days' ? 'month' : timeRange === '3months' ? 'month' : 'year'}`;
+
+                let activities = [];
+                let isDemo = false;
+
+                try {
+                    updateLoadingStep('Fetching posts...');
+                    const postsData = await fetchWithProxy(postsUrl);
+                    const posts = postsData.data.children.map(c => ({
+                        id: c.data.id,
+                        title: c.data.title,
+                        body: c.data.selftext,
+                        subreddit: c.data.subreddit,
+                        score: c.data.score,
+                        created_utc: c.data.created_utc
+                    }));
+
+                    updateLoadingStep('Fetching comments...');
+                    const commentsData = await fetchWithProxy(commentsUrl);
+                    const comments = commentsData.data.children.map(c => ({
+                        id: c.data.id,
+                        body: c.data.body,
+                        subreddit: c.data.subreddit,
+                        score: c.data.score,
+                        created_utc: c.data.created_utc
+                    }));
+
+                    activities = [...posts, ...comments];
+                } catch (error) {
+                    console.warn('Failed to fetch real data, using demo:', error);
+                    updateLoadingStep('Using demo data...');
+                    activities = generateDemoData(username);
+                    isDemo = true;
+                }
+
+                if (activities.length === 0) {
+                    activities = generateDemoData(username);
+                    isDemo = true;
+                }
+
+                updateLoadingStep('Analyzing activity...');
+                await new Promise(r => setTimeout(r, 500));
+
+                const topics = analyzeTopics(activities);
+                const posts = activities.filter(a => a.title);
+                const comments = activities.filter(a => !a.title);
+                const voiceScript = generateVoiceScript(username, activities, topics);
+
+                analysisResult = {
+                    username,
+                    activities,
+                    topics,
+                    posts,
+                    comments,
+                    voiceScript,
+                    isDemo
+                };
+
+                updateLoadingStep('Preparing results...');
+                await new Promise(r => setTimeout(r, 300));
+
+                showResults();
+            } catch (error) {
+                console.error('Error:', error);
+                showError('An error occurred. Please try again.');
+                showInput();
+            }
+        }
+
+        // Load demo data
+        function loadDemo() {
+            document.getElementById('username').value = 'demo_user';
+            generateBriefing();
+        }
+
+        // UI Functions
+        function showLoading(step) {
+            document.getElementById('input-section').classList.add('hidden');
+            document.getElementById('loading-section').classList.remove('hidden');
+            document.getElementById('results-section').classList.add('hidden');
+            updateLoadingStep(step);
+        }
+
+        function updateLoadingStep(step) {
+            document.getElementById('loading-step').textContent = step;
+        }
+
+        function showResults() {
+            document.getElementById('input-section').classList.add('hidden');
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('results-section').classList.remove('hidden');
+
+            // Update badge
+            const badge = document.getElementById('data-source-badge');
+            if (analysisResult.isDemo) {
+                badge.className = 'badge badge-demo';
+                badge.textContent = '🟡 Demo Data';
+            } else {
+                badge.className = 'badge badge-live';
+                badge.textContent = '🟢 Live Data';
+            }
+
+            // Update stats
+            document.getElementById('total-posts').textContent = analysisResult.posts.length;
+            document.getElementById('total-comments').textContent = analysisResult.comments.length;
+            
+            const subredditCounts = {};
+            analysisResult.activities.forEach(a => {
+                subredditCounts[a.subreddit] = (subredditCounts[a.subreddit] || 0) + 1;
+            });
+            const topSubreddit = Object.entries(subredditCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('top-subreddit').textContent = topSubreddit ? `r/${topSubreddit[0]}` : '-';
+            
+            document.getElementById('top-topic').textContent = analysisResult.topics[0]?.name || '-';
+
+            // Update voice script
+            document.getElementById('voice-script').textContent = analysisResult.voiceScript;
+
+            // Update topics
+            const topicsContainer = document.getElementById('topics-container');
+            topicsContainer.innerHTML = analysisResult.topics.map(topic => `
+                <div class="topic-bar">
+                    <div class="topic-header">
+                        <span class="topic-name">${topic.name}</span>
+                        <span class="topic-percent">${topic.percentage}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${topic.percentage}%"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showInput() {
+            document.getElementById('input-section').classList.remove('hidden');
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('results-section').classList.add('hidden');
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+            setTimeout(() => errorEl.classList.add('hidden'), 5000);
+        }
+
+        function resetApp() {
+            stopBriefing();
+            document.getElementById('username').value = '';
+            showInput();
+        }
+
+        // Voice Functions
+        function playBriefing() {
+            if (!analysisResult) return;
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                
+                currentUtterance = new SpeechSynthesisUtterance(analysisResult.voiceScript);
+                currentUtterance.rate = 1.0;
+                currentUtterance.pitch = 1.0;
+                
+                window.speechSynthesis.speak(currentUtterance);
+            } else {
+                alert('Text-to-Speech is not supported in this browser');
+            }
+        }
+
+        function pauseBriefing() {
+            if ('speechSynthesis' in window) {
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.pause();
+                }
+            }
+        }
+
+        function stopBriefing() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function restartBriefing() {
+            stopBriefing();
+            setTimeout(playBriefing, 100);
+        }
+
+        // Initialize
+        document.getElementById('username').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                generateBriefing();
+            }
+        });
+    </script>
+</body>
+</html>

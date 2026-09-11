@@ -191,10 +191,21 @@ export default function LandingPage({ onGenerate, error }: LandingPageProps) {
         </motion.div>
       </main>
 
+      {/* WebView Info Banner */}
+      <div className="max-w-xl mx-auto mt-6 px-4">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs">
+          <span>🌐</span>
+          <span>WebView Mode: Uses CORS proxies for Reddit API access. Falls back to demo data if unavailable.</span>
+        </div>
+      </div>
+
       {/* Footer */}
       <footer className="px-6 py-4 text-center">
         <p className="text-xs text-slate-600">
           This tool analyzes publicly available Reddit activity. Insights are AI-generated and may not fully represent the individual.
+        </p>
+        <p className="text-xs text-slate-700 mt-2">
+          Works in WebView simulators: BlueStacks, NoxPlayer, LDPlayer, Android Emulator
         </p>
       </footer>
     </div>

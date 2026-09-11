@@ -39,7 +39,7 @@ export default function App() {
     setError(null);
     setResult(null);
     setChatMessages([]);
-    setLoadingStep('Fetching Reddit activity...');
+    setLoadingStep('Initializing...');
 
     try {
       let activities;
@@ -51,20 +51,21 @@ export default function App() {
         activities = generateDemoData(cleaned);
       } else {
         try {
+          setLoadingStep('Connecting to Reddit via CORS proxy...');
           activities = await fetchRedditActivity(cleaned, tRange as any, lim, (step) => {
             setLoadingStep(step);
           });
         } catch (fetchErr) {
-          // If Reddit API fails (e.g., CORS), use demo data
+          // If Reddit API fails (e.g., CORS in WebView), use demo data
           console.warn('Reddit API fetch failed, using demo data:', fetchErr);
-          setLoadingStep('Using demo data (Reddit API unavailable)...');
+          setLoadingStep('CORS proxy unavailable. Loading demo data...');
           await new Promise(r => setTimeout(r, 500));
           activities = generateDemoData(cleaned);
         }
       }
 
       // If still no activities, use demo data as final fallback
-      if (activities.length === 0) {
+      if (!activities || activities.length === 0) {
         console.warn('No activities found after all attempts, using demo data');
         setLoadingStep('Generating demo analysis...');
         await new Promise(r => setTimeout(r, 500));
