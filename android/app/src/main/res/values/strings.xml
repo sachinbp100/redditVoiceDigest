@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Reddit Voice Digest</string>
+    <string name="title_activity_main">Reddit Voice Digest</string>
+    <string name="package_name">com.redditvoicedigest.app</string>
+    <string name="custom_url_scheme">com.redditvoicedigest.app</string>
+</resources>

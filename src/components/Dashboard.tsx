@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnalysisResult, ChatMessage } from '../types';
-import { Mic, BarChart3, MessageCircle, Clock, Trash2, ArrowLeft } from 'lucide-react';
+import { Mic, BarChart3, MessageCircle, Clock, Trash2, ArrowLeft, Smartphone, Globe } from 'lucide-react';
+import { getPlatform } from '../services/redditService';
 import VoiceBriefing from './VoiceBriefing';
 import ActivitySummary from './ActivitySummary';
 import TopicInsights from './TopicInsights';
@@ -19,6 +20,11 @@ type Tab = 'briefing' | 'summary' | 'topics' | 'timeline' | 'chat';
 
 export default function Dashboard({ result, chatMessages, voices, onChat, onNewAnalysis }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('briefing');
+  const [platform, setPlatform] = useState<string>('web');
+
+  useEffect(() => {
+    setPlatform(getPlatform());
+  }, []);
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: 'briefing', label: 'Voice Briefing', icon: Mic },
@@ -60,6 +66,19 @@ export default function Dashboard({ result, chatMessages, voices, onChat, onNewA
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Platform Indicator */}
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${
+              platform === 'native'
+                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                : 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
+            }`}>
+              {platform === 'native' ? (
+                <Smartphone className="w-3 h-3" />
+              ) : (
+                <Globe className="w-3 h-3" />
+              )}
+              <span className="hidden sm:inline">{platform === 'native' ? 'Native APK' : 'Web'}</span>
+            </div>
             {/* Data Source Indicator */}
             <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${
               result.dataSource === 'live' 

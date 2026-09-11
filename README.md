@@ -2,7 +2,20 @@
 
 > Turn Reddit Activity Into an AI Voice Briefing
 
-An AI-powered web application that analyzes publicly available Reddit activity and generates an intelligent, conversational voice briefing. Enter any Reddit username and receive a personalized audio summary of their interests, activity patterns, and community engagement.
+**Available as a Web App AND Native Android APK** - Uses native HTTP clients (like Huxe AI) to bypass CORS and fetch real Reddit data for any username.
+
+An AI-powered application that analyzes publicly available Reddit activity and generates an intelligent, conversational voice briefing. Enter any Reddit username and receive a personalized audio summary of their interests, activity patterns, and community engagement.
+
+## 📱 Build a Native Android APK
+
+This project can be built as a **true native Android APK** that:
+- Uses native HTTP client (OkHttp) - **no CORS issues**
+- Fetches real Reddit data for any public username
+- Works on any Android device or emulator
+- Can be distributed as an APK file
+
+**→ See [QUICK_START.md](QUICK_START.md) for 5-minute setup**
+**→ See [ANDROID_BUILD.md](ANDROID_BUILD.md) for detailed instructions**
 
 ## ✨ Features
 

@@ -1,9 +1,15 @@
 import { RedditActivity, RedditPost, RedditComment, TimeRange } from '../types';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
 const REDDIT_BASE = 'https://www.reddit.com';
 const USER_AGENT = 'RedditVoiceDigest/1.0';
 
-// Multiple CORS proxies with fallback
+// Detect if running in native Capacitor environment
+const isNativePlatform = (): boolean => {
+  return Capacitor.isNativePlatform();
+};
+
+// CORS proxies for web browser fallback
 const CORS_PROXIES = [
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url: string) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
@@ -33,32 +39,59 @@ function getTimestampCutoff(timeRange: TimeRange): number {
   }
 }
 
+/**
+ * Native HTTP fetch using Capacitor's built-in native HTTP client
+ * This bypasses CORS entirely because it uses the native HTTP stack (OkHttp on Android)
+ */
+async function fetchNative(url: string): Promise<any> {
+  const response = await CapacitorHttp.get({
+    url,
+    headers: {
+      'User-Agent': USER_AGENT,
+    },
+  });
+  
+  if (response.status === 404) {
+    throw new Error('User not found');
+  }
+  if (response.status === 429) {
+    throw new Error('Rate limited');
+  }
+  if (response.status >= 400) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  
+  // CapacitorHttp returns data already parsed
+  const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+  
+  if (!data || !data.data || !data.data.children) {
+    throw new Error('Invalid Reddit response format');
+  }
+  
+  return data;
+}
+
+/**
+ * Web fetch with CORS proxy fallback
+ */
 async function fetchWithProxy(url: string): Promise<any> {
-  // Try each CORS proxy in order
   for (let i = 0; i < CORS_PROXIES.length; i++) {
     const proxyUrl = CORS_PROXIES[i](url);
     
     try {
       const response = await fetch(proxyUrl, {
-        headers: {
-          'User-Agent': USER_AGENT,
-        },
+        headers: { 'User-Agent': USER_AGENT },
       });
       
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('User not found');
-        }
-        if (response.status === 429) {
-          throw new Error('Rate limited');
-        }
+        if (response.status === 404) throw new Error('User not found');
+        if (response.status === 429) throw new Error('Rate limited');
         console.warn(`Proxy ${i + 1} returned status ${response.status}, trying next...`);
         continue;
       }
       
       const data = await response.json();
       
-      // Validate response structure
       if (!data || !data.data || !data.data.children) {
         console.warn(`Proxy ${i + 1} returned invalid data, trying next...`);
         continue;
@@ -66,40 +99,48 @@ async function fetchWithProxy(url: string): Promise<any> {
       
       return data;
     } catch (error) {
-      // If it's a critical error (user not found), throw immediately
       if (error instanceof Error && (error.message === 'User not found' || error.message === 'Rate limited')) {
         throw error;
       }
       
       console.warn(`Proxy ${i + 1} failed:`, error);
       
-      // Try next proxy
       if (i === CORS_PROXIES.length - 1) {
-        // Last proxy failed, try direct fetch as final attempt
+        // Try direct fetch as final attempt
         try {
           const directResponse = await fetch(url, {
             headers: { 'User-Agent': USER_AGENT },
           });
           
-          if (!directResponse.ok) {
-            throw new Error(`Direct fetch failed: ${directResponse.status}`);
-          }
-          
-          const data = await directResponse.json();
-          
-          if (data && data.data && data.data.children) {
-            return data;
+          if (directResponse.ok) {
+            const data = await directResponse.json();
+            if (data && data.data && data.data.children) {
+              return data;
+            }
           }
         } catch (directError) {
           console.warn('Direct fetch also failed:', directError);
         }
         
-        throw new Error('All CORS proxies failed. Please try again later.');
+        throw new Error('All fetch methods failed. Please try again later.');
       }
     }
   }
   
   throw new Error('Failed to fetch Reddit data');
+}
+
+/**
+ * Smart fetch that uses native HTTP on Android/iOS and CORS proxies on web
+ */
+async function fetchRedditJSON(url: string): Promise<any> {
+  if (isNativePlatform()) {
+    // Native platform - use native HTTP (no CORS!)
+    return fetchNative(url);
+  } else {
+    // Web browser - use CORS proxies
+    return fetchWithProxy(url);
+  }
 }
 
 async function fetchUserPosts(username: string, timeRange: TimeRange, limit: number): Promise<RedditPost[]> {
@@ -113,7 +154,7 @@ async function fetchUserPosts(username: string, timeRange: TimeRange, limit: num
     const url = `${REDDIT_BASE}/user/${username}/submitted.json?limit=25&t=${timeFilter}&after=${after}`;
     
     try {
-      const data = await fetchWithProxy(url);
+      const data = await fetchRedditJSON(url);
       
       if (!data.data.children.length) break;
       
@@ -139,11 +180,10 @@ async function fetchUserPosts(username: string, timeRange: TimeRange, limit: num
       after = data.data.after || null;
       if (!after) break;
       
-      // Rate limiting - be respectful
+      // Rate limiting - be respectful to Reddit
       await new Promise(resolve => setTimeout(resolve, 1500));
     } catch (e) {
-      if (e instanceof Error && e.message === 'User not found') throw e;
-      if (e instanceof Error && e.message === 'Rate limited') throw e;
+      if (e instanceof Error && (e.message === 'User not found' || e.message === 'Rate limited')) throw e;
       break;
     }
   }
@@ -162,7 +202,7 @@ async function fetchUserComments(username: string, timeRange: TimeRange, limit: 
     const url = `${REDDIT_BASE}/user/${username}/comments.json?limit=25&t=${timeFilter}&after=${after}`;
     
     try {
-      const data = await fetchWithProxy(url);
+      const data = await fetchRedditJSON(url);
       
       if (!data.data.children.length) break;
       
@@ -187,11 +227,10 @@ async function fetchUserComments(username: string, timeRange: TimeRange, limit: 
       after = data.data.after || null;
       if (!after) break;
       
-      // Rate limiting - be respectful
+      // Rate limiting - be respectful to Reddit
       await new Promise(resolve => setTimeout(resolve, 1500));
     } catch (e) {
-      if (e instanceof Error && e.message === 'User not found') throw e;
-      if (e instanceof Error && e.message === 'Rate limited') throw e;
+      if (e instanceof Error && (e.message === 'User not found' || e.message === 'Rate limited')) throw e;
       break;
     }
   }
@@ -205,7 +244,8 @@ export async function fetchRedditActivity(
   limit: number,
   onProgress?: (step: string) => void
 ): Promise<RedditActivity[]> {
-  onProgress?.('Fetching Reddit posts via CORS proxy...');
+  const platform = isNativePlatform() ? 'Native (Android/iOS)' : 'Web Browser';
+  onProgress?.(`Fetching Reddit data via ${platform}...`);
   
   const halfLimit = Math.floor(limit / 2);
   
@@ -225,4 +265,8 @@ export async function fetchRedditActivity(
 
 export function cleanUsername(input: string): string {
   return input.replace(/^u\//, '').replace(/^\/u\//, '').trim();
+}
+
+export function getPlatform(): string {
+  return isNativePlatform() ? 'native' : 'web';
 }

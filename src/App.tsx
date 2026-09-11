@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnalysisResult, ChatMessage } from './types';
-import { fetchRedditActivity, cleanUsername } from './services/redditService';
+import { fetchRedditActivity, cleanUsername, getPlatform } from './services/redditService';
 import { analyzeRedditActivity, answerQuestion } from './services/analysisService';
 import { initVoices } from './services/voiceService';
 import { generateDemoData } from './services/demoData';
